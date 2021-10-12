@@ -9,7 +9,7 @@ global control: reflex {
 	file river_file <- shape_file('../includes/kenhrach2010_region.shp');
 	file road_file <- shape_file('../includes/duong2010_region.shp');
 	file district_file <- shape_file('../includes/huyenST_2019_region.shp');
-	file dyke_file <- shape_file('../includes/soctrang_debao2010_region.shp');
+	file dyke_file <- shape_file('../includes/soctrang_debao2010_region.shp');//soctrang_debao2010_region
 	file cell_calibrate_file <- grid_file("../includes/landuse/st2010x100align.tif");
 //	file landunit_file <- shape_file('../includes/dvdd_hientai_region.shp');
 	// 3 layers of land unit map
@@ -26,7 +26,9 @@ global control: reflex {
 	float total_riceother;
 	float total_shrimp;
 	float total_fruit;
-	float w_lancan <- 0.8;
+	float pixel_size <-100*100/10000;
+	int v_year<-2005;
+	
 	matrix suitability_matrix;
 	map<string, map<int,float>> suitability_map;	
 	matrix bebefit_matrix;
@@ -34,14 +36,16 @@ global control: reflex {
 	list<cell_calibrate> active_cell_calibrate <- cell_calibrate where (each.grid_value >1.0);
 	float v_kappa <- 0.0;
 	list creteria;
-	float w_suitability <- 1.0 ;
+	float w_lancan <- 0.8;
+	float w_suitability <- 0.6 ;
 	matrix dif_shifting_matrix;
-	float w_diff_shifting <- 0.8;
+	map<string,float> kqkhokhanchuyendoi_map;
+	float w_diff_shifting <- 0.6;
 	float w_benefit <- 0.5;
  	bool batch_mode <-false;
 	float total_crops;	
 	// list of land use type and color
-	map<int,rgb> LUT <-[0::#white,5::rgb(255, 252, 140),6:: rgb(255, 252, 150),34:: rgb(170, 255, 255),14::rgb(255, 210, 160),12::rgb(255, 240, 180),1::#gray];
+	map<int,rgb> LUT <-[0::#white,5::rgb(255, 252, 140),6:: rgb(255, 252, 150),34:: rgb(170, 255, 255),14::rgb(255, 210, 160),12::rgb(255, 240, 180),101::#lightgreen,1::#gray];
 	// list of salinity level
 	map<int,rgb>lstSalinity_color<-[0::#white,1::rgb(250,170,170),2::rgb(240,140,140),3::rgb(230,80,80),4::rgb(230,30,30),5::rgb(150,20,20)];
 	map<int,rgb>lstSalinity_time_color<-[0::#white,1::rgb(250,210,210),3::rgb(240,160,160),6::rgb(230,80,80),5::rgb(230,30,30),7::rgb(150,20,20)];
@@ -74,13 +78,26 @@ global control: reflex {
 		creteria <- [["name"::"lancan", "weight"::w_lancan], ["name"::"thichnghi", "weight"::w_suitability],
 		["name"::"khokhan","weight"::w_diff_shifting],["name"::"loinhuan","weight"::w_benefit]];
 		//do cal_area_lu_2005;
-		do cal_area_lu_obs;
+		//do cal_area_lu_obs;
 		ask active_cell {
 			do set_color;
 			color_salinity <- lstSalinity_color[salinity_level];
 			color_salinity_time <- lstSalinity_time_color[salinity_time_level];
 		}
 		do sal_instrusion_canal;
+//		// đổi giá trị lúa tôm: 
+//		loop vungtom_obj over: dyke {
+//			ask land_cell overlapping vungtom_obj {
+//				if (landuse =6){
+//					grid_value<-101.0;
+//				}
+//				
+//				
+//			}
+//			
+//
+//		}
+//		save land_cell to: "../results/input/st2015x100align.tif" type: "geotiff";
 	}
 	action tinhtongdt {
 		total_rice <- 0.0;
@@ -90,33 +107,31 @@ global control: reflex {
 		total_crops <- 0.0;
 		ask active_cell {
 			if (landuse = 5) {
-				total_rice <- total_rice + 400 * 400 / 10000;
+				total_rice <- total_rice + pixel_size;
 			}
 			if (landuse = 34) {
-				total_shrimp <- total_shrimp + 400 * 400 / 10000;
+				total_shrimp <- total_shrimp +pixel_size;
 			}
 			if (landuse = 6) {
-				total_riceother <- total_riceother + 400 * 400 / 10000;
+				total_riceother <- total_riceother + pixel_size;
 			}
 			if (landuse = 14) {
-				total_fruit <- total_fruit + 400 * 400 / 10000;
+				total_fruit <- total_fruit + pixel_size;
 			}
 			if (landuse = 12) {
-				total_crops <- total_crops + 400 * 400 / 10000;
+				total_crops <- total_crops + pixel_size;
 			}
 		}
 		write "Tong dt lua: " + total_rice;
 		write "Tong dt ts: " + total_shrimp;
 		write "Tong dt lua khac: " + total_riceother;
 		write "Tong dt cay an qua: " + total_fruit;
-		write "Tong dt cay hang nam: " + total_crops;
+		write "Tong dt cay hang nam: " + total_crops;		
+		save land_cell to: "../results/hientrang_sim.tif" type: "geotiff";
+		save [v_year,total_rice, total_shrimp, total_riceother, total_fruit, total_crops]
+			to: "../results/hientrang_huyen_sim.csv" type: "csv" rewrite: false;		
 	}
-
-//	action doc_matran_TN {
-//		suitability_matrix <- matrix(landsuitability_2_file);
-//		write "Ma tran Thich Nghi" + suitability_matrix;
-//	}	
-// built markov matrix :
+// built markov matrix:
 	action built_salinity_markov_maps {
 		list<int> lstDykeRegion <- remove_duplicates(dyke collect each.dyke_region);
 //		lstSalinity_level <-remove_duplicates(salinity collect each.salinity_level);
@@ -181,7 +196,16 @@ global control: reflex {
 
 	action doc_dif_shifting_matrix {
 		dif_shifting_matrix <- matrix(shiftable_eval_file);
-		write "Ma tran Kho Khan" + dif_shifting_matrix;
+		int i <- 0;
+		int j <- 0;
+		loop i from: 1 to: dif_shifting_matrix.rows - 1 {
+			int landuse1 <- int(dif_shifting_matrix[0, i]);
+			loop j from: 1 to: dif_shifting_matrix.columns - 1 { //do tung cot cua matran
+				int landuse2 <- int(dif_shifting_matrix[j, 0]);
+				kqkhokhanchuyendoi_map <+ "" + landuse1 + " " + landuse2::float(dif_shifting_matrix[j, i]);
+			}
+		}
+		write "Map kho khan:" + kqkhokhanchuyendoi_map;
 	}
 	action set_dyke_region{
 		loop dyke_obj over: dyke{
@@ -218,8 +242,7 @@ global control: reflex {
 			}
 		}
 	}
-
-	action cal_area_lu_sim {
+	action cal_area_lu_district_sim {
 		float dt_tsl;
 		float dt_luc;
 		float dt_luk;
@@ -227,7 +250,6 @@ global control: reflex {
 		float dt_bhk;
 		// ghi dòng tiêu đề kết quả hiện trạng ra file CSV
 		// nếu có nhiều loại đất thì thêm vào
-		save "district_name, dt_luc,dt_tsl,dt_luk,dt_cln,dt_bhk" to: "../results/hientrang_huyen.csv" type: "csv" rewrite: true;
 		loop district_obj over: district {
 		// duyệt hết các cell chồng lắp với huyện để tính diên diện tich
 			dt_luc <- 0.0;
@@ -237,19 +259,19 @@ global control: reflex {
 			dt_bhk <- 0.0;
 			ask land_cell overlapping district_obj {
 				if (landuse = 5) {
-					dt_luc <- dt_luc + 400 * 400 / 10000;
+					dt_luc <- dt_luc + pixel_size;
 				}
 				if (landuse = 34) {
-					dt_tsl <- dt_tsl + 400 * 400 / 10000;
+					dt_tsl <- dt_tsl + pixel_size;
 				}
 				if (landuse = 6) {
-					dt_luk <- dt_luk + 400 * 400 / 10000;
+					dt_luk <- dt_luk + pixel_size;
 				}
 				if (landuse = 14) {
-					dt_cln <- dt_cln + 400 * 400 / 10000;
+					dt_cln <- dt_cln +pixel_size;
 				}
 				if (landuse = 12) {
-					dt_bhk <- dt_bhk + 400 * 400 / 10000;
+					dt_bhk <- dt_bhk + pixel_size;
 				}
 				grid_value <- float(landuse);
 			}
@@ -260,15 +282,14 @@ global control: reflex {
 			district_obj.total_fruit_h <- dt_cln;
 			district_obj.total_crops_h <- dt_bhk;
 			save
-			[district_obj.district_name, district_obj.total_rice_h, district_obj.total_shrimp_h, district_obj.total_riceother_h, district_obj.total_fruit_h, district_obj.total_crops_h]
-			to: "../results/hientrang_huyen.csv" type: "csv" rewrite: false;
+			[v_year,district_obj.district_name, district_obj.total_rice_h, district_obj.total_shrimp_h, district_obj.total_riceother_h, district_obj.total_fruit_h, district_obj.total_crops_h]
+			to: "../results/hientrang_huyen_sim.csv" type: "csv" rewrite: false;
 			write district_obj.district_name + ';' + dt_luc + ';' + dt_tsl + ';' + dt_luk + ';' + dt_cln + ';' + dt_bhk;
 		}
 		// ghu kết quả huyen ra file shapfile thuộc tính gồm 3 cột: ten huyen, dt luc, dt tsl. Nếu có thểm thì cứ thêm loại đất vào
-		save district to: "../results/district_landuse.shp" type: "shp" attributes:
-		["district_name"::district_name, "dt_luc"::total_rice_h, "dt_tsl"::total_shrimp_h, "dt_luk"::total_riceother_h, "dt_cln"::total_fruit_h, "dt_bhk"::total_crops_h];
-		save land_cell to: "../results/hientrang_sim" + (2005 + cycle) + ".tif" type: "geotiff";
-		write "Đa tinh dien tich hien trang theo huyen xong";
+//		save district to: "../results/district_landuse.shp" type: "shp" attributes:
+	//	["district_name"::district_name, "dt_luc"::total_rice_h, "dt_tsl"::total_shrimp_h, "dt_luk"::total_riceother_h, "dt_cln"::total_fruit_h, "dt_bhk"::total_crops_h];
+//		write "Đa tinh dien tich hien trang theo huyen xong";
 	}
 
 	action cal_area_lu_obs {
@@ -279,7 +300,6 @@ global control: reflex {
 		float dt_bhk;
 		// ghi dòng tiêu đề kết quả hiện trạng ra file CSV
 		// nếu có nhiều loại đất thì thêm vào
-		save "district_name, dt_luc,dt_tsl,dt_luk,dt_cln,dt_bhk" to: "../results/hientrang_huyen2010.csv" type: "csv" rewrite: true;
 		loop district_obj over: district {
 		// duyệt hết các cell chồng lắp với huyện để tính diên diện tich
 			dt_luc <- 0.0;
@@ -289,19 +309,19 @@ global control: reflex {
 			dt_bhk <- 0.0;
 			ask cell_calibrate overlapping district_obj { // 2010 là cell_calibrate
 				if (landuse = 5) {
-					dt_luc <- dt_luc + 400 * 400 / 10000;
+					dt_luc <- dt_luc + pixel_size;
 				}
 				if (landuse = 34) {
-					dt_tsl <- dt_tsl + 400 * 400 / 10000;
+					dt_tsl <- dt_tsl + pixel_size;
 				}
 				if (landuse = 6) {
-					dt_luk <- dt_luk + 400 * 400 / 10000;
+					dt_luk <- dt_luk + pixel_size;
 				}
 				if (landuse = 14) {
-					dt_cln <- dt_cln + 400 * 400 / 10000;
+					dt_cln <- dt_cln + pixel_size;
 				}
 				if (landuse = 12) {
-					dt_bhk <- dt_bhk + 400 * 400 / 10000;
+					dt_bhk <- dt_bhk + pixel_size;
 				}
 			}
 			// Lưu kết quả tính từng loại đất vào biến toại đát ương ứng của huyện
@@ -311,13 +331,13 @@ global control: reflex {
 			district_obj.total_fruit_h <- dt_cln;
 			district_obj.total_crops_h <- dt_bhk;
 			save
-			[district_obj.district_name, district_obj.total_rice_h, district_obj.total_shrimp_h, district_obj.total_riceother_h, district_obj.total_fruit_h, district_obj.total_crops_h]
-			to: "../results/hientrang_district2010.csv" type: "csv" rewrite: false;
-			write district_obj.district_name + ';' + dt_luc + ';' + dt_tsl + ';' + dt_luk + ';' + dt_cln + ';' + dt_bhk;
+			[v_year, district_obj.district_name, district_obj.total_rice_h, district_obj.total_shrimp_h, district_obj.total_riceother_h, district_obj.total_fruit_h, district_obj.total_crops_h]
+			to: "../results/hientrang_district2015.csv" type: "csv" rewrite: false;
+		//	write district_obj.district_name + ';' + dt_luc + ';' + dt_tsl + ';' + dt_luk + ';' + dt_cln + ';' + dt_bhk;
 		}
 		// ghu kết quả district ra file shapfile thuộc tính gồm 3 cột: ten district, dt luc, dt tsl. Nếu có thểm thì cứ thêm loại đất vào
-		save district to: "../results/district2010_landuse.shp" type: "shp" attributes:
-		["district_name"::district_name, "dt_luc"::total_rice_h, "dt_tsl"::total_shrimp_h, "dt_luk"::total_riceother_h, "dt_cln"::total_fruit_h, "dt_bhk"::total_crops_h];
+//		save district to: "../results/district2010_landuse.shp" type: "shp" attributes:
+//		["district_name"::district_name, "dt_luc"::total_rice_h, "dt_tsl"::total_shrimp_h, "dt_luk"::total_riceother_h, "dt_cln"::total_fruit_h, "dt_bhk"::total_crops_h];
 		//save cell_calibrate to:"../results/hientrang_2010.tif" type:"geotiff";  Cái này ko cần vì bản đồ 2010 đã có 
 		//write "Đa tinh dien tich hien trang theo huyen xong";
 	}
@@ -400,14 +420,7 @@ global control: reflex {
 	
 	action salinity_dynamic{
 		list<land_cell>ds_man1 <-[];
-//		ds_man1<-active_cell where (each.chiso_man2>0) sort_by each.chiso_man2;
-////		ds_man1 <-last(100,ds_man1);
-//		ask ds_man1{// tìm các cell từ danh sách các số không mặn từ dưới lên 1 số cell
-//			if dyke_region>1{
-//				salinity_level<-2;// gán thành mặn 6t
-//				color_salinity <-salinity_color[salinity_level];			
-//			}
-//		}
+
 		ds_man1<-active_cell where (each.salinity_level<3 and each.chiso_man3>0) sort_by each.chiso_man3;
 		//ds_man1 <-last(100,ds_man1);
 		ask ds_man1{// tìm các cell từ danh sách các số không mặn từ dưới lên 1 số cell
@@ -416,14 +429,6 @@ global control: reflex {
 				color_salinity <-lstSalinity_color[salinity_level];		
 			}
 		}
-//		ds_man1<-active_cell where (each.salinity_level<4 and each.chiso_man4>0) sort_by each.chiso_man4;
-////		ds_man1 <-last(100,ds_man1);
-//		ask ds_man1{// tìm các cell từ danh sách các số không mặn từ dưới lên 1 số cell
-//			if dyke_region>1{
-//				salinity_level<-4;// gán thành mặn 6t	
-//				color_salinity <-salinity_color[salinity_level];		
-//			}
-//		}
 	}
 	action markov_salinity{
 		ask shuffle(active_cell where (each.dyke_region>=2 and each.salinity_level<=3 and each.changed_sal=false)){
@@ -460,7 +465,7 @@ global control: reflex {
 	}
 	reflex main_reflex {
 //		action tinh toan chuyen doi salinity and salt time
-		
+		v_year <- v_year+cycle;  
 //		do markov_salinity; 
 		do salinity_dynamic_river; 
 		do cal_salinity_capa_index;
@@ -469,70 +474,52 @@ global control: reflex {
 //		do salinity_time_dynamic;
 //		
 //////////////////////////////////////////////////////////////////////////
-//		// xetb da tieu chi
-//		ask active_cell {
-//			do landuse_eval;
-//			do select_landuse;
-//			do set_color;
-//		}
-		write "Tieu chi :" + creteria;
-		// kiem tra ma tra nthich nghi
-//		write "kiem tra ma tran thich nghi:";
-//		string st;
-//		int i <- 0;
-//		int j <- 0;
-//		loop i from: 1 to: suitability_matrix.rows - 1 {
-//			st <- "";
-//			loop j from: 3 to: suitability_matrix.columns - 1 {
-//				st <- st + ";" + suitability_matrix[j, i];
-//			}
-//
-//			write st;
-//		}
-
-		// test kiem tra các thong so 1 cell
-		ask land_cell where (each.dyke_region=2 and each.salinity_level=3) at 1 {
-			list<float> vals <- salinity_markov_map[dyke_region][salinity_level];
-			write "dyke:" + dyke_region +" Salinity level: "+ salinity_level;
-			write "gia tri marlov man:"+ vals;
-			list<list> cands <- landuse_eval();
-			write "danh sách cand:" + cands;
-			write "Tieu chi :" + creteria;
-			int choice <- 0;
-			//if (landuse=5 or landuse=6 or landuse=14 ){//những loại đất có khả năng chuyển
-			choice <- weighted_means_DM(cands, creteria);
-			//choice tra vi tri ung vien trong danh sach
-			if (choice = 0) {
-			//if flip(0.05){
-			//if check_suitability(madvdd,5)>0{	
-				landuse <- 5;
-				//}
-			}
-			if (choice = 1) {
-			//if check_suitability(madvdd,34)>0{
-				landuse <- 34;
-				//}	
-			}
-			if (choice = 2) {
-			//if check_suitability(madvdd,6)>0{
-				landuse <- 6;
-				//}
-			}
-			if (choice = 3) {
-			//	if check_suitability(madvdd,14)>0{
-				landuse <- 14;
-				//}
-			}
-			if (choice = 4) {
-				landuse <- 12;
-			}
-//			write "Lua chon tra ve cho land_cell:" + choice;
-//			write "madvdd cua cell :" + madvdd + " ;muc thich nghi TSL:" + check_suitability(madvdd, 34);
-//			write "muc thich nghi LUC:" + check_suitability(madvdd, 5);
-//			write "muc thich nghi LUK:" + check_suitability(madvdd, 6);
-//			write "muc thich nghi CLN:" + check_suitability(madvdd, 14);
-//			write "muc thich nghi BHK:" + check_suitability(madvdd, 12);
+		// xetb da tieu chi
+		ask active_cell {
+			do landuse_eval;
+			do select_landuse;
+			do set_color;
 		}
+		write "Tieu chi :" + creteria;
+
+//		// test kiem tra các thong so 1 cell
+//		ask land_cell where (each.dyke_region=2 and each.salinity_level=3) at 1500 {
+//			list<float> vals <- salinity_markov_map[dyke_region][salinity_level];
+//			write "dyke:" + dyke_region +" Salinity level: "+ salinity_level;
+//			write "gia tri marlov man:"+ vals;
+//			list<list> cands <- landuse_eval();
+//			write "danh sách cand:" + cands;
+//			write "Tieu chi :" + creteria;
+//			int choice <- 0;
+//			//if (landuse=5 or landuse=6 or landuse=14 ){//những loại đất có khả năng chuyển
+//			choice <- weighted_means_DM(cands, creteria);
+//			//choice tra vi tri ung vien trong danh sach
+//			if (choice = 0) {
+//			//if flip(0.05){
+//			//if check_suitability(madvdd,5)>0{	
+//				landuse <- 5;
+//				//}
+//			}
+//			if (choice = 1) {
+//			//if check_suitability(madvdd,34)>0{
+//				landuse <- 34;
+//				//}	
+//			}
+//			if (choice = 2) {
+//			//if check_suitability(madvdd,6)>0{
+//				landuse <- 6;
+//				//}
+//			}
+//			if (choice = 3) {
+//			//	if check_suitability(madvdd,14)>0{
+//				landuse <- 14;
+//				//}
+//			}
+//			if (choice = 4) {
+//				landuse <- 12;
+//			}
+//			write "Lua chon tra ve cho land_cell:" + choice;
+//		}
 		do tinhtongdt;
 		if (cycle = 25) {
 			do tinh_kappa;
@@ -581,20 +568,6 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 	aspect salinity10{
 		draw shape color:color_salinity10 border: color_salinity10;
 	}
-//	action tinhcell_lancanman{
-////		list<cell_man2005>cell_lancan<-(self neighbors_at 1);
-////		heso_lancan_man6t <-(cell_lancan count(each.man =6 ))/8;
-////		heso_lancan_man1n <-(cell_lancan count(each.man = 34))/8;
-////		
-//	}
-//	action cal_capability_index {
-//	//hesochuyendoi_tsl <- w_lancan_TSL*shrimp_density_index;
-//	//hesochuyendoi_luk <- w_lancan_LUK*ricecrops_density_index;
-//	//hesochuyendoi_luc <- w_lancan_LUC*rice_density_index;
-//	//hesochuyendoi_cln <- w_lancan_CLN*fruit_density_index;
-//	//hesochuyendoi_bhk <- w_lancan_BHK*crops_density_index;
-//
-//	}
 	int getSalinityLevel(int sal) {
 		int kq<-2; 
 	 	 if (sal <=2){
@@ -631,12 +604,13 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 		candluc << cal_lu_density(5);
 		
 		candluc << landSuitability[5]; // check_suitability(madvdd, 5);
-		candluc << check_shiftable(landuse, 5);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
+		candluc << xet_khokhanchuyendoi(landuse,5);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5
+		//xet_khokhanchuyendoi(landuse, 34);	
 		candluc << get_benefit(5);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5
 		//dua dac tinh ung vien tsl
 		candtsl << cal_lu_density(34);
 		candtsl << landSuitability[34]; 
-		candtsl << check_shiftable(landuse, 34);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
+		candtsl << xet_khokhanchuyendoi(landuse, 34);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
 		candtsl << get_benefit(34);
 		//dua dac tinh ung vien hnk
 		//canddtl<<chiso_DTL_lancan;
@@ -645,17 +619,17 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 		//dua dac tinh ung vien lnk
 		candluk << cal_lu_density(6);
 		candluk << landSuitability[6]; 
-		candluk << check_shiftable(landuse, 6);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
+		candluk << xet_khokhanchuyendoi(landuse, 6);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
 		candluk << get_benefit(6);
 		//dua dac tinh ung vien rst
 		candcln << cal_lu_density(14);
 		candcln << landSuitability[14]; 
-		candcln << check_shiftable(landuse, 14);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
+		candcln << xet_khokhanchuyendoi(landuse, 14);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
 		candcln << get_benefit(14);
 		
 		candbhk << cal_lu_density(12);
 		candbhk << landSuitability[12]; 
-		candbhk << check_shiftable(landuse, 12);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
+		candbhk << xet_khokhanchuyendoi(landuse, 12);  // gias trij chuyeern ddooir tuwf Lu hien tai sang 5	
 		candbhk << get_benefit(12);
 		//nap cac ung vien vao danh sach candidates
 		candidates << candluc;
@@ -663,6 +637,15 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 		candidates << candluk;
 		candidates << candcln;
 		candidates << candbhk;
+
+//		write "madvdd cua cell :" + slandunit + " ;muc thich nghi TSL:" + landSuitability[34];
+//		write "muc thich nghi LUC:" + landSuitability[ 5];
+//		write "muc thich nghi LUK:" +landSuitability[ 6];
+//		write "muc thich nghi CLN:" + landSuitability[14];
+//		write "muc thich nghi BHK:" + landSuitability[12];
+//		write "kho khan chuyen doi BHK:" + xet_khokhanchuyendoi(landuse, 12);
+//		write "Loi nhuan tom:"+ get_benefit(34) +" Density 34:"+ cal_lu_density(34); 
+		
 		return candidates;
 	}
 
@@ -700,23 +683,6 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 		if (choice = 4) {
 			landuse <- 12;
 		}
-
-	}
-
-	int check_shiftable (int landuse1, int landuse2) {
-		int kqkhokhan <- 0;
-		int i <- 0;
-		int j <- 0;
-		loop i from: 1 to: dif_shifting_matrix.rows - 1 {
-			if (dif_shifting_matrix[0, i] = landuse1) {
-				loop j from: 1 to: dif_shifting_matrix.columns - 1 {
-					if (dif_shifting_matrix[j, 0] = landuse2) {
-						kqkhokhan <- int(dif_shifting_matrix[j, i]);
-					}
-				}
-			}
-		}
-		return kqkhokhan;
 	}
 	// get benefit of land use
 	int get_benefit(int landuse1){
@@ -730,6 +696,15 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 		}
 		return kq;
 	}
+	float xet_khokhanchuyendoi (int landuse1, int landuse2) {
+		float kqkhokhanchuyendoi <- 0.0;
+		if (kqkhokhanchuyendoi_map["" + landuse1 + " " + landuse2] = nil) {
+		} else {
+			kqkhokhanchuyendoi <- kqkhokhanchuyendoi_map["" + landuse1 + " " + landuse2];
+		}
+		return kqkhokhanchuyendoi;
+	}
+	
 	
 	float cal_lu_density (int lu) {
 		float kq <- 0.0;
@@ -851,16 +826,16 @@ species district control: reflex {
 }
 
 experiment "LanduseModel" type: gui {
-	parameter "Weight density" var: w_lancan <- 0.8;
-	parameter "Weight suitability" var: w_suitability <- 0.8;
-	parameter 'Weight difficulties' var: w_diff_shifting min: 0.1 max: 1.0 step:0.1;
-	parameter 'Weight bebefit:' var: w_benefit min: 0.1 max: 1.0 step:0.1;
+	parameter "Weight density" var: w_lancan ;
+	parameter "Weight suitability" var: w_suitability ;
+	parameter 'Weight ability' var: w_diff_shifting ;
+	parameter 'Weight profit:' var: w_benefit ;
 	output {
-//		display lu_sim type: java2D {
-//			grid land_cell;
-//			species river;
-//			species road;
-//		}
+		display lu_sim type: java2D {
+			grid land_cell;
+			//species river;
+			//species road;
+		}
 		display lu_charts type: java2D {
 			chart "Layer" type: series background: rgb(255, 255, 255) {
 				data "Tong dt lua" style: line value: total_rice color: #yellow;
@@ -870,9 +845,6 @@ experiment "LanduseModel" type: gui {
 				data "Tong dt bhk" style: line value: total_crops color: #red;
 			}
 		}
-//		display lu_obs type: java2D {
-//			grid cell_calibrate;
-//		}
 //		display salinity_dynamic type:opengl{
 //			//species dyke;
 //			species land_cell aspect:salinity_aspect ;
@@ -885,10 +857,7 @@ experiment "LanduseModel" type: gui {
 			species land_cell aspect:salinity_aspect ;
 //			species river;
 //			species road;
-
 		}
-		
-		
 //		display salinity_time_dyn type:java2D{
 //			species land_cell aspect:salinity_time_aspect  ;
 //		}
@@ -899,7 +868,7 @@ experiment "Calibrate" type: batch repeat: 1 keep_seed: true until: ( time > 5 )
 	parameter 'Weight density' var: w_lancan min: 0.1 max: 1.0 step:0.1;
 	parameter 'Weight suitability:' var: w_suitability min: 0.1 max: 1.0 step:0.1;
 	parameter 'Weight difficulties' var: w_diff_shifting min: 0.1 max: 1.0 step:0.1;
-	parameter 'Weight bebefit:' var: w_benefit min: 0.1 max: 1.0 step:0.1;
+	parameter 'Weight profit:' var: w_benefit min: 0.1 max: 1.0 step:0.1;
 	init {
 		batch_mode <- true;
 	}

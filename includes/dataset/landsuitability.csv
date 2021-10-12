@@ -1,21 +1,21 @@
-soiltype,salinity_level,salt_time,5,6,12,14,34
-Dat man,2,1,0,0,0,0,0.75
-Dat man,2,2,0,0,0,0,1
-Dat man,3,1,0,0,0,0,0.75
-Dat man,3,2,0,0,0,0,0.5
-Dat cat,2,1,0,0,1,0,0
-Dat cat,2,2,0,0,0.75,0,0
-Dat cat,3,1,0,0,0.75,0,0
-Dat cat,3,2,0,0,0.5,0,0
-Dat phen tiem tang,2,1,1,0.75,1,1,0
-Dat phen tiem tang,2,2,0,0.5,0.75,0.75,0.5
-Dat phen tiem tang,3,1,0,0.5,0.5,0.5,0.75
-Dat phen tiem tang,3,2,0,0,0,0,1
-Dat phen hoat dong,2,1,0.75,0.75,1,1,0
-Dat phen hoat dong,2,2,0,0.5,0.75,0.75,0.75
-Dat phen hoat dong,3,1,0,0.5,0.5,0.5,0.5
-Dat phen hoat dong,3,2,0,0,0,0,0.5
-Dat phu sa,2,1,1,1,1,1,0
-Dat phu sa,2,2,0,0.75,0.75,0.75,0.5
-Dat phu sa,3,1,0,0.5,0.5,0.5,0.75
-Dat phu sa,3,2,0,0,0,0,1
+soiltype,salinity_level,salt_time,5,6,12,14,34,101
+Dat man,2,1,0,0,0,0,0.75,0.75
+Dat man,2,2,0,0,0,0,1,1
+Dat man,3,1,0,0,0,0,0.75,0.75
+Dat man,3,2,0,0,0,0,0.5,0.5
+Dat cat,2,1,0,0,1,0,0,0
+Dat cat,2,2,0,0,0.75,0,0,0
+Dat cat,3,1,0,0,0.75,0,0,0
+Dat cat,3,2,0,0,0.5,0,0,0
+Dat phen tiem tang,2,1,1,0.75,1,1,0,0
+Dat phen tiem tang,2,2,0,0.5,0.75,0.75,0.5,0.5
+Dat phen tiem tang,3,1,0,0.5,0.5,0.5,0.75,0.75
+Dat phen tiem tang,3,2,0,0,0,0,1,1
+Dat phen hoat dong,2,1,0.75,0.75,1,1,0,0
+Dat phen hoat dong,2,2,0,0.5,0.75,0.75,0.75,0.75
+Dat phen hoat dong,3,1,0,0.5,0.5,0.5,0.5,0.5
+Dat phen hoat dong,3,2,0,0,0,0,0.5,0.5
+Dat phu sa,2,1,1,1,1,1,0,0
+Dat phu sa,2,2,0,0.75,0.75,0.75,0.5,0.5
+Dat phu sa,3,1,0,0.5,0.5,0.5,0.75,0.75
+Dat phu sa,3,2,0,0,0,0,1,1
