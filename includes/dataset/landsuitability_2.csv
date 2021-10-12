@@ -1,0 +1,17 @@
+dvdd,soil_name,salt_deg,5,6,34,12,14,35
+1,Dat cat,Khong man,0,0.33,0,0.67,0.33,0
+2,Dat phen tiem tang,Khong man,0.67,0.67,0,1,0.67,0
+3,Dat phu sa,Khong man,1,1,0,1,1,0
+4,Dat man,Khong man,0.67,0,0,0.67,0.67,0
+5,Dat phen hoat dong,Khong man,0.33,0.33,0,0.67,0.67,0
+6,Dat phu sa,8-Apr,0.67,0.67,0,0.67,0.67,0
+7,Dat man,8-Apr,0,0,0.67,0,0,0
+8,Dat man,12-Aug,0,0,1,0,0,0
+9,Dat cat,12-Aug,0,0,0.67,0.33,0,0
+10,Dat phu sa,12-Aug,0.33,0.33,1,0.33,0.33,0
+11,Dat phu sa,20-Dec,0,0,0.67,0.33,0.33,0
+12,Dat man,20-Dec,0,0,0.67,0,0,0
+13,Dat cat,20-Dec,0,0,0.67,0,0,0
+14,Dat phen tiem tang,20-Dec,0,0,0.67,0,0.33,0
+15,Dat cat,> 20,0,0,0,0.67,0,0
+16,Dat man,> 20,0,0,0.67,0,0,0
