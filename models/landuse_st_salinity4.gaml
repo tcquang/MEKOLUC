@@ -26,6 +26,7 @@ global control: reflex {
 	float total_riceother;
 	float total_shrimp;
 	float total_fruit;
+	float total_rice_shrimp;
 	float pixel_size <-100*100/10000;
 	int v_year<-2005;
 	
@@ -45,7 +46,7 @@ global control: reflex {
  	bool batch_mode <-false;
 	float total_crops;	
 	// list of land use type and color
-	map<int,rgb> LUT <-[0::#white,5::rgb(255, 252, 140),6:: rgb(255, 252, 150),34:: rgb(170, 255, 255),14::rgb(255, 210, 160),12::rgb(255, 240, 180),101::#lightgreen,1::#gray];
+	map<int,rgb> LUT <-[0::#white,5::#yellow,6:: #lightyellow,34:: #cyan,14::#darkgreen,12::#lightgreen,101::rgb(40, 150, 120),1::#lightgray];
 	// list of salinity level
 	map<int,rgb>lstSalinity_color<-[0::#white,1::rgb(250,170,170),2::rgb(240,140,140),3::rgb(230,80,80),4::rgb(230,30,30),5::rgb(150,20,20)];
 	map<int,rgb>lstSalinity_time_color<-[0::#white,1::rgb(250,210,210),3::rgb(240,160,160),6::rgb(230,80,80),5::rgb(230,30,30),7::rgb(150,20,20)];
@@ -102,6 +103,7 @@ global control: reflex {
 	action tinhtongdt {
 		total_rice <- 0.0;
 		total_shrimp <- 0.0;
+		total_rice_shrimp <- 0.0;
 		total_riceother <- 0.0;
 		total_fruit <- 0.0;
 		total_crops <- 0.0;
@@ -112,6 +114,10 @@ global control: reflex {
 			if (landuse = 34) {
 				total_shrimp <- total_shrimp +pixel_size;
 			}
+			if (landuse = 101) {
+				total_rice_shrimp <- total_rice_shrimp +pixel_size;
+			}
+			
 			if (landuse = 6) {
 				total_riceother <- total_riceother + pixel_size;
 			}
@@ -124,11 +130,12 @@ global control: reflex {
 		}
 		write "Tong dt lua: " + total_rice;
 		write "Tong dt ts: " + total_shrimp;
+		write "Tong dt lua_tom: " + total_rice_shrimp;
 		write "Tong dt lua khac: " + total_riceother;
 		write "Tong dt cay an qua: " + total_fruit;
 		write "Tong dt cay hang nam: " + total_crops;		
 		save land_cell to: "../results/hientrang_sim.tif" type: "geotiff";
-		save [v_year,total_rice, total_shrimp, total_riceother, total_fruit, total_crops]
+		save [v_year,total_rice, total_shrimp, total_rice_shrimp,total_riceother, total_fruit, total_crops]
 			to: "../results/hientrang_huyen_sim.csv" type: "csv" rewrite: false;		
 	}
 // built markov matrix:
@@ -248,6 +255,7 @@ global control: reflex {
 		float dt_luk;
 		float dt_cln;
 		float dt_bhk;
+		float dt_ricetsl;
 		// ghi dòng tiêu đề kết quả hiện trạng ra file CSV
 		// nếu có nhiều loại đất thì thêm vào
 		loop district_obj over: district {
@@ -257,6 +265,7 @@ global control: reflex {
 			dt_luk <- 0.0;
 			dt_cln <- 0.0;
 			dt_bhk <- 0.0;
+			dt_ricetsl <-0.0;
 			ask land_cell overlapping district_obj {
 				if (landuse = 5) {
 					dt_luc <- dt_luc + pixel_size;
@@ -264,6 +273,10 @@ global control: reflex {
 				if (landuse = 34) {
 					dt_tsl <- dt_tsl + pixel_size;
 				}
+				if (landuse = 101) {
+					dt_tsl <- dt_ricetsl + pixel_size;
+				}
+				
 				if (landuse = 6) {
 					dt_luk <- dt_luk + pixel_size;
 				}
@@ -279,12 +292,13 @@ global control: reflex {
 			district_obj.total_rice_h <- dt_luc;
 			district_obj.total_shrimp_h <- dt_tsl;
 			district_obj.total_riceother_h <- dt_luk;
+			district_obj.total_rice_shrimp_h <- dt_ricetsl;
 			district_obj.total_fruit_h <- dt_cln;
 			district_obj.total_crops_h <- dt_bhk;
 			save
-			[v_year,district_obj.district_name, district_obj.total_rice_h, district_obj.total_shrimp_h, district_obj.total_riceother_h, district_obj.total_fruit_h, district_obj.total_crops_h]
+			[v_year,district_obj.district_name, district_obj.total_rice_h, district_obj.total_shrimp_h,district_obj.total_rice_shrimp_h, district_obj.total_riceother_h, district_obj.total_fruit_h, district_obj.total_crops_h]
 			to: "../results/hientrang_huyen_sim.csv" type: "csv" rewrite: false;
-			write district_obj.district_name + ';' + dt_luc + ';' + dt_tsl + ';' + dt_luk + ';' + dt_cln + ';' + dt_bhk;
+			//write district_obj.district_name + ';' + dt_luc + ';' + dt_tsl + ';' + dt_luk + ';' + dt_cln + ';' + dt_bhk;
 		}
 		// ghu kết quả huyen ra file shapfile thuộc tính gồm 3 cột: ten huyen, dt luc, dt tsl. Nếu có thểm thì cứ thêm loại đất vào
 //		save district to: "../results/district_landuse.shp" type: "shp" attributes:
@@ -465,7 +479,7 @@ global control: reflex {
 	}
 	reflex main_reflex {
 //		action tinh toan chuyen doi salinity and salt time
-		v_year <- v_year+cycle;  
+		v_year <- 2005+cycle;  
 //		do markov_salinity; 
 		do salinity_dynamic_river; 
 		do cal_salinity_capa_index;
@@ -480,7 +494,7 @@ global control: reflex {
 			do select_landuse;
 			do set_color;
 		}
-		write "Tieu chi :" + creteria;
+//		write "Tieu chi :" + creteria;
 
 //		// test kiem tra các thong so 1 cell
 //		ask land_cell where (each.dyke_region=2 and each.salinity_level=3) at 1500 {
@@ -521,13 +535,20 @@ global control: reflex {
 //			write "Lua chon tra ve cho land_cell:" + choice;
 //		}
 		do tinhtongdt;
-		if (cycle = 25) {
+		if (cycle mod 5) = 0{
+			save land_cell to: "../results/hientrang_sim"+v_year+".tif" type: "geotiff";
+		}
+		
+		if (cycle = 5) {
 			do tinh_kappa;
+		}
+		if (cycle >25)  {
 			//	do cal_area_lu_sim;
 			if not batch_mode {
-		//		do pause;	
+				do pause;	
 			} 
 		}
+	
 	}
 }
 
@@ -656,16 +677,17 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 		choice <- weighted_means_DM(cands, creteria);
 		//choice tra vi tri ung vien trong danh sach
 		if (choice = 0) {
-		//if flip(0.05){
+			if flip(0.05){
 		//if check_suitability(madvdd,5)>0{	
 			landuse <- 5;
-			//}
+			}
 		}
 
 		if (choice = 1) {
+			if flip(0.15){
 		//if check_suitability(madvdd,34)>0{
 			landuse <- 34;
-			//}	
+			}	
 		}
 
 		if (choice = 2) {
@@ -676,13 +698,17 @@ grid land_cell file: cell_file control: reflex neighbors: 8 {
 
 		if (choice = 3) {
 		//	if check_suitability(madvdd,14)>0{
-			landuse <- 14;
-			//}
+			if flip(0.2){
+				landuse <- 14;
+			}
 		}
 
 		if (choice = 4) {
-			landuse <- 12;
+			if flip(0.2){
+				landuse <- 12;		
+			}
 		}
+		grid_value<-float(landuse);
 	}
 	// get benefit of land use
 	int get_benefit(int landuse1){
@@ -816,6 +842,7 @@ species district control: reflex {
 	string district_name;
 	float total_rice_h;
 	float total_shrimp_h;
+	float total_rice_shrimp_h;
 	float total_riceother_h;
 	float total_fruit_h;
 	float total_crops_h;
